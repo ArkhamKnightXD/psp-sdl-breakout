@@ -58,17 +58,18 @@ typedef struct {
 } Brick;
 
 std::vector<Brick> createBricks() {
+
     std::vector<Brick> bricks;
 
     int positionX;
     int positionY = 20;
 
-    for (int i = 0; i < 8; i++)
-    {
+    for (int i = 0; i < 8; i++) {
+
         positionX = 2;
 
-        for (int j = 0; j < 14; j++)
-        {
+        for (int j = 0; j < 14; j++) {
+            
             Brick actualBrick = {{positionX, positionY, 32, 8}, false};
 
             bricks.push_back(actualBrick);

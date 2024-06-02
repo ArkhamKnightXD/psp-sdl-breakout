@@ -4,35 +4,35 @@
 #include <pspkernel.h>
 #include <vector>
 
-PSP_MODULE_INFO("SDL-Starter", 0, 1, 0);
+PSP_MODULE_INFO("SDL-BREAKOUT", 0, 1, 0);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
  
-int exit_callback(int arg1, int arg2, void* common)
-{
+int exitCallback(int arg1, int arg2, void* common) {
+
     sceKernelExitGame();
     return 0;
 }
 
-int CallbackThread(SceSize args, void* argp)
-{
-    int cbid = sceKernelCreateCallback("Exit Callback", exit_callback, NULL); 
+int callbackThread(SceSize args, void* argp) {
+
+    int cbid = sceKernelCreateCallback("Exit Callback", exitCallback, NULL); 
     sceKernelRegisterExitCallback(cbid);
     sceKernelSleepThreadCB();
 
     return 0;
 }
 
-int SetupCallbacks(void)
-{
-    int thid = sceKernelCreateThread("update_thread", CallbackThread, 0x11, 0xFA0, 0, 0);
-    if (thid >= 0)
-    {
+int setupCallbacks(void) {
+
+    int thid = sceKernelCreateThread("update_thread", callbackThread, 0x11, 0xFA0, 0, 0);
+
+    if (thid >= 0) {
         sceKernelStartThread(thid, 0, 0);
     }
+
     return thid;
 }
 
-// Screen dimension constants
 enum {
   SCREEN_WIDTH  = 480,
   SCREEN_HEIGHT = 272
@@ -42,9 +42,7 @@ SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 SDL_GameController* controller = NULL;
 
-bool running = true;
-
-SDL_Rect player = {SCREEN_WIDTH / 2, SCREEN_HEIGHT - 16, 32, 8};
+SDL_Rect player = {SCREEN_WIDTH / 2, SCREEN_HEIGHT - 16, 36, 8};
 SDL_Rect ball = {SCREEN_WIDTH / 2 - 8, SCREEN_HEIGHT / 2 - 8, 8, 8};
 
 int playerSpeed = 400;
@@ -53,14 +51,13 @@ int ballVelocityY = 225;
 
 bool isAutoPlayMode = false;
 
-typedef struct
-{
+typedef struct {
+
     SDL_Rect bounds;
     bool isDestroyed;
 } Brick;
 
-std::vector<Brick> createBricks()
-{
+std::vector<Brick> createBricks() {
     std::vector<Brick> bricks;
 
     int positionX;
@@ -86,7 +83,6 @@ std::vector<Brick> createBricks()
 
 std::vector<Brick> bricks = createBricks();
 
-// Exit the game and clean up
 void quitGame() {
 
     SDL_GameControllerClose(controller);
@@ -95,7 +91,6 @@ void quitGame() {
     SDL_Quit();
 }
 
-// Function to handle events
 void handleEvents() {
 
     SDL_Event event;
@@ -103,26 +98,15 @@ void handleEvents() {
     while (SDL_PollEvent(&event)) {
 
         if (event.type == SDL_QUIT) {
-            
+
             quitGame();
             exit(0);
         }
     }
 }
 
-const int FRAME_RATE = 60;
+bool hasCollision(SDL_Rect bounds, SDL_Rect ball) {
 
-void capFrameRate(Uint32 frameStartTime) {
-
-    Uint32 frameTime = SDL_GetTicks() - frameStartTime;
-    
-    if (frameTime < 1000 / FRAME_RATE) {
-        SDL_Delay(1000 / FRAME_RATE - frameTime);
-    }
-}
-
-bool hasCollision(SDL_Rect bounds, SDL_Rect ball)
-{
     return bounds.x < ball.x + ball.w && bounds.x + bounds.w > ball.x &&
            bounds.y < ball.y + ball.h && bounds.y + bounds.h > ball.y;
 }
@@ -131,13 +115,11 @@ void update(float deltaTime) {
 
     SDL_GameControllerUpdate();
 
-    if (SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_START))
-    {
+    if (SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_START)) {
         isAutoPlayMode = !isAutoPlayMode;
     }
 
-    if (isAutoPlayMode && ball.x < SCREEN_WIDTH - player.w)
-    {
+    if (isAutoPlayMode && ball.x < SCREEN_WIDTH - player.w) {
         player.x = ball.x;
     }
 
@@ -149,33 +131,30 @@ void update(float deltaTime) {
         player.x += playerSpeed * deltaTime;
     }
 
-    if (ball.y > SCREEN_HEIGHT + ball.h)
-    {
+    if (ball.y > SCREEN_HEIGHT + ball.h) {
+
         ball.x = SCREEN_WIDTH / 2 - ball.w;
         ball.y = SCREEN_HEIGHT / 2 - ball.h;
 
         ballVelocityX *= -1;
     }
 
-    if (ball.y < 0)
-    {
+    if (ball.y < 0) {
         ballVelocityY *= -1;
     }
     
-    if (ball.x < 0 || ball.x > SCREEN_WIDTH - ball.w)
-    {
+    if (ball.x < 0 || ball.x > SCREEN_WIDTH - ball.w) {
         ballVelocityX *= -1;
     }
 
-    if (hasCollision(player, ball))
-    {
+    if (hasCollision(player, ball)) {
         ballVelocityY *= -1;
     }
 
-    for (unsigned int i = 0; i < bricks.size(); i++)
-    {
-        if (!bricks[i].isDestroyed && hasCollision(bricks[i].bounds, ball))
-        {
+    for (unsigned int i = 0; i < bricks.size(); i++) {
+
+        if (!bricks[i].isDestroyed && hasCollision(bricks[i].bounds, ball)) {
+
             ballVelocityY *= -1;
             bricks[i].isDestroyed = true;
         }
@@ -192,8 +171,8 @@ void render() {
 
     SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);
 
-    for (Brick brick : bricks)
-    {
+    for (Brick brick : bricks) {
+
         if (!brick.isDestroyed)
             SDL_RenderFillRect(renderer, &brick.bounds);
     }
@@ -206,9 +185,9 @@ void render() {
     SDL_RenderPresent(renderer);
 }
 
-int main()
-{
-    SetupCallbacks();
+int main() {
+
+    setupCallbacks();
     SDL_SetMainReady();
     pspDebugScreenInit();
 
@@ -242,8 +221,7 @@ int main()
     Uint32 currentFrameTime;
     float deltaTime;
 
-    while (running)
-    {
+    while (true) {
         currentFrameTime = SDL_GetTicks();
         deltaTime = (currentFrameTime - previousFrameTime) / 1000.0f;
         previousFrameTime = currentFrameTime;
@@ -251,7 +229,6 @@ int main()
         handleEvents();
         update(deltaTime);
         render();
-        // capFrameRate(currentFrameTime);
     }
 
     quitGame();

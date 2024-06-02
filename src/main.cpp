@@ -1,8 +1,8 @@
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
 #include <pspdebug.h>
 #include <pspkernel.h>
+#include <vector>
 
 PSP_MODULE_INFO("SDL-Starter", 0, 1, 0);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
@@ -15,7 +15,7 @@ int exit_callback(int arg1, int arg2, void* common)
 
 int CallbackThread(SceSize args, void* argp)
 {
-    int cbid = sceKernelCreateCallback("Exit Callback", exit_callback, NULL);
+    int cbid = sceKernelCreateCallback("Exit Callback", exit_callback, NULL); 
     sceKernelRegisterExitCallback(cbid);
     sceKernelSleepThreadCB();
 
@@ -41,16 +41,50 @@ enum {
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 SDL_GameController* controller = NULL;
-SDL_Texture* sprite;
-
-bool shouldRenderSprite = false;
 
 bool running = true;
 
-SDL_Rect rectangle = {SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 16, 16};
+SDL_Rect player = {SCREEN_WIDTH / 2, SCREEN_HEIGHT - 16, 32, 8};
+SDL_Rect ball = {SCREEN_WIDTH / 2 - 8, SCREEN_HEIGHT / 2 - 8, 8, 8};
 
-const int SPEED = 600; 
-const int FRAME_RATE = 60; 
+int playerSpeed = 400;
+int ballVelocityX = 225;
+int ballVelocityY = 225;
+
+bool isAutoPlayMode = false;
+
+typedef struct
+{
+    SDL_Rect bounds;
+    bool isDestroyed;
+} Brick;
+
+std::vector<Brick> createBricks()
+{
+    std::vector<Brick> bricks;
+
+    int positionX;
+    int positionY = 20;
+
+    for (int i = 0; i < 8; i++)
+    {
+        positionX = 2;
+
+        for (int j = 0; j < 14; j++)
+        {
+            Brick actualBrick = {{positionX, positionY, 32, 8}, false};
+
+            bricks.push_back(actualBrick);
+            positionX += 34;
+        }
+
+        positionY += 10;
+    }
+
+    return bricks;
+}
+
+std::vector<Brick> bricks = createBricks();
 
 // Exit the game and clean up
 void quitGame() {
@@ -76,6 +110,8 @@ void handleEvents() {
     }
 }
 
+const int FRAME_RATE = 60;
+
 void capFrameRate(Uint32 frameStartTime) {
 
     Uint32 frameTime = SDL_GetTicks() - frameStartTime;
@@ -85,69 +121,89 @@ void capFrameRate(Uint32 frameStartTime) {
     }
 }
 
-SDL_Texture* LoadSprite(const char* file, SDL_Renderer* renderer)
+bool hasCollision(SDL_Rect bounds, SDL_Rect ball)
 {
-    SDL_Texture* texture = IMG_LoadTexture(renderer, file);
-    if (texture == nullptr)
-    {
-        pspDebugScreenPrintf("Failed to create texture: %s\n", SDL_GetError());
-        sceKernelDelayThread(3 * 1000 * 1000);
-        return nullptr;
-    }
-    pspDebugScreenPrintf("Loaded image: %s\n", file);
-    sceKernelDelayThread(3 * 1000 * 1000);
-    return texture;
+    return bounds.x < ball.x + ball.w && bounds.x + bounds.w > ball.x &&
+           bounds.y < ball.y + ball.h && bounds.y + bounds.h > ball.y;
 }
-
-void RenderSprite(SDL_Texture* sprite, SDL_Renderer* renderer, int x, int y)
-{
-    SDL_Rect dest;
-    dest.x = x;
-    dest.y = y;
-    SDL_QueryTexture(sprite, NULL, NULL, &dest.w, &dest.h);
-    SDL_RenderCopy(renderer, sprite, NULL, &dest);
-}
-
+ 
 void update(float deltaTime) {
 
     SDL_GameControllerUpdate();
 
-    if (SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_A)) {
-        shouldRenderSprite = !shouldRenderSprite;
+    if (SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_START))
+    {
+        isAutoPlayMode = !isAutoPlayMode;
     }
 
-    if (SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_UP) && rectangle.y > 0) {
-        rectangle.y -= SPEED * deltaTime;
+    if (isAutoPlayMode && ball.x < SCREEN_WIDTH - player.w)
+    {
+        player.x = ball.x;
     }
 
-    else if (SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_DOWN) && rectangle.y < SCREEN_HEIGHT - rectangle.h) {
-        rectangle.y += SPEED * deltaTime;
+    if (SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_LEFT) && player.x > 0) {
+        player.x -= playerSpeed * deltaTime;
     }
 
-    else if (SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_LEFT) && rectangle.x > 0) {
-        rectangle.x -= SPEED * deltaTime;
+    else if (SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_RIGHT) && player.x < SCREEN_WIDTH - player.w) {
+        player.x += playerSpeed * deltaTime;
     }
 
-    else if (SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_RIGHT) && rectangle.x < SCREEN_WIDTH - rectangle.w) {
-        rectangle.x += SPEED * deltaTime;
+    if (ball.y > SCREEN_HEIGHT + ball.h)
+    {
+        ball.x = SCREEN_WIDTH / 2 - ball.w;
+        ball.y = SCREEN_HEIGHT / 2 - ball.h;
+
+        ballVelocityX *= -1;
     }
+
+    if (ball.y < 0)
+    {
+        ballVelocityY *= -1;
+    }
+    
+    if (ball.x < 0 || ball.x > SCREEN_WIDTH - ball.w)
+    {
+        ballVelocityX *= -1;
+    }
+
+    if (hasCollision(player, ball))
+    {
+        ballVelocityY *= -1;
+    }
+
+    for (unsigned int i = 0; i < bricks.size(); i++)
+    {
+        if (!bricks[i].isDestroyed && hasCollision(bricks[i].bounds, ball))
+        {
+            ballVelocityY *= -1;
+            bricks[i].isDestroyed = true;
+        }
+    }
+
+    ball.x += ballVelocityX * deltaTime;
+    ball.y += ballVelocityY * deltaTime;
 }
 
 void render() {
-
+    
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);
 
-    if(shouldRenderSprite) 
+    for (Brick brick : bricks)
     {
-        RenderSprite(sprite, renderer, 100, 100);
+        if (!brick.isDestroyed)
+            SDL_RenderFillRect(renderer, &brick.bounds);
     }
 
-    SDL_RenderFillRect(renderer, &rectangle);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
-    SDL_RenderPresent(renderer);  
+    SDL_RenderFillRect(renderer, &player);
+    SDL_RenderFillRect(renderer, &ball);
+
+    SDL_RenderPresent(renderer);
 }
 
 int main()
@@ -160,7 +216,7 @@ int main()
         return -1;
     }
 
-    if ((window = SDL_CreateWindow("RedRectangle", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, 0)) == NULL) {
+    if ((window = SDL_CreateWindow("Breakout", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, 0)) == NULL) {
         return -1;
     }
 
@@ -181,8 +237,6 @@ int main()
             return -1;
         }
     }
-
-    sprite = LoadSprite("sprites/sprite.png", renderer);
 
     Uint32 previousFrameTime = SDL_GetTicks();
     Uint32 currentFrameTime;

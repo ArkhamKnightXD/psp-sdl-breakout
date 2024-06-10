@@ -54,7 +54,7 @@ bool isAutoPlayMode = false;
 typedef struct {
 
     SDL_Rect bounds;
-    bool isDestroyed;
+    bool isDestroyed;  
 } Brick;
 
 std::vector<Brick> createBricks() {
@@ -139,25 +139,21 @@ void update(float deltaTime) {
 
         ballVelocityX *= -1;
     }
-
-    if (ball.y < 0) {
-        ballVelocityY *= -1;
-    }
     
     if (ball.x < 0 || ball.x > SCREEN_WIDTH - ball.w) {
         ballVelocityX *= -1;
     }
 
-    if (hasCollision(player, ball)) {
+    if (hasCollision(player, ball) || ball.y < 0) {
         ballVelocityY *= -1;
     }
 
-    for (unsigned int i = 0; i < bricks.size(); i++) {
+    for (Brick &brick : bricks) {
 
-        if (!bricks[i].isDestroyed && hasCollision(bricks[i].bounds, ball)) {
+        if (!brick.isDestroyed && hasCollision(brick.bounds, ball)) {
 
             ballVelocityY *= -1;
-            bricks[i].isDestroyed = true;
+            brick.isDestroyed = true;
         }
     }
 

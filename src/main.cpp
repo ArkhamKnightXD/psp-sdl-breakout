@@ -219,6 +219,7 @@ int main() {
     float deltaTime;
 
     while (true) {
+        
         currentFrameTime = SDL_GetTicks();
         deltaTime = (currentFrameTime - previousFrameTime) / 1000.0f;
         previousFrameTime = currentFrameTime;

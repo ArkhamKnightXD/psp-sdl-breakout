@@ -211,6 +211,18 @@ void update(float deltaTime) {
         }
     }
 
+    for (auto iterator = bricks.begin(); iterator != bricks.end();)
+    {
+        if (iterator->isDestroyed)
+        {
+            bricks.erase(iterator);
+        }
+        else
+        {
+            iterator++;
+        }
+    }
+
     ball.x += ballVelocityX * deltaTime;
     ball.y += ballVelocityY * deltaTime;
 }

@@ -249,12 +249,12 @@ void render()
 
     SDL_QueryTexture(scoreTexture, NULL, NULL, &scoreBounds.w, &scoreBounds.h);
     scoreBounds.x = 100;
-    scoreBounds.y = scoreBounds.h / 2 - 10;
+    scoreBounds.y = scoreBounds.h / 2 - 5;
     SDL_RenderCopy(renderer, scoreTexture, NULL, &scoreBounds);
 
     SDL_QueryTexture(liveTexture, NULL, NULL, &liveBounds.w, &liveBounds.h);
     liveBounds.x = 300;
-    liveBounds.y = liveBounds.h / 2 - 10;
+    liveBounds.y = liveBounds.h / 2 - 5;
     SDL_RenderCopy(renderer, liveTexture, NULL, &liveBounds);
 
     SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);

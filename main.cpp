@@ -54,7 +54,7 @@ std::vector<Brick> createBricks()
 
     for (int row = 0; row < 8; row++)
     {
-        positionX = 0;
+        positionX = 2;
 
         for (int column = 0; column < 14; column++)
         {
@@ -166,13 +166,9 @@ void update(float deltaTime) {
         {
             playerLives--;
 
-            std::string livesString = std::to_string(playerLives);
+            std::string livesString = "lives: " + std::to_string(playerLives);
 
-            std::string completeString = "lives: " + livesString;
-
-            char const *livesChar = completeString.c_str();
-
-            updateTextureText(liveTexture, livesChar);
+            updateTextureText(liveTexture, livesString.c_str());
         }
     }
 
@@ -188,38 +184,29 @@ void update(float deltaTime) {
         Mix_PlayChannel(-1, collisionWithPlayerSound, 0);
     }
 
-    for (Brick &brick : bricks)
+    for (auto actualBrick = bricks.begin(); actualBrick != bricks.end();)
     {
-        if (!brick.isDestroyed && SDL_HasIntersection(&brick.bounds, &ball))
+        if (!actualBrick->isDestroyed && SDL_HasIntersection(&actualBrick->bounds, &ball))
         {
             ballVelocityY *= -1;
-            brick.isDestroyed = true;
+            actualBrick->isDestroyed = true;
 
-            playerScore += brick.points;
+            playerScore += actualBrick->points;
 
-            std::string scoreString = std::to_string(playerScore);
+            std::string scoreString = "score: " + std::to_string(playerScore);
 
-            std::string finalScoreString = "score: " + scoreString;
-
-            char const *score = finalScoreString.c_str();
-
-            updateTextureText(scoreTexture, score);
+            updateTextureText(scoreTexture, scoreString.c_str());
 
             Mix_PlayChannel(-1, collisionSound, 0);
-
-            break;
         }
-    }
 
-    for (auto iterator = bricks.begin(); iterator != bricks.end();)
-    {
-        if (iterator->isDestroyed)
+        if (actualBrick->isDestroyed)
         {
-            bricks.erase(iterator);
+            bricks.erase(actualBrick);
         }
         else
         {
-            iterator++;
+            actualBrick++;
         }
     }
 

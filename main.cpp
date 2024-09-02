@@ -35,7 +35,7 @@ int playerSpeed = 400;
 int ballVelocityX = 225;
 int ballVelocityY = 225;
 
-bool isAutoPlayMode = false;
+bool isAutoPlayMode = true;
 
 typedef struct
 {
